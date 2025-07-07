@@ -1,0 +1,39 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Volumes
+volumes/
+
+# Backup files
+*.sql
+*.backup
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker
+.docker/
+
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+dist/
+build/

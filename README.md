@@ -1,2 +1,235 @@
-# eliteperfume-supabase
-Supabase Docker setup for ElitePerfume project
+# Supabase Docker Setup for ElitePerfume
+
+??? ????? ???? ?????????? Supabase ?? ???? ???? ???? ????? ElitePerfume ????? ??? ???.
+
+## ???????????
+
+- Docker
+- Docker Compose
+
+## ??? ? ??????????
+
+### 1. ???? ???? ?????
+
+```bash
+git clone https://github.com/soccerlover096/eliteperfume-supabase.git
+cd eliteperfume-supabase
+```
+
+### 2. ????? ???????? ?????
+
+???? `.env` ?? ?????? ???? ? ?????? ??? ?? ????? ????:
+
+- `POSTGRES_PASSWORD`: ??? ???? ??????? PostgreSQL
+- `JWT_SECRET`: ???? JWT (????? 32 ???????)
+
+### 3. ????? ???????? ???? ????
+
+```bash
+mkdir -p volumes/db/data
+mkdir -p volumes/db/init
+mkdir -p volumes/storage
+mkdir -p volumes/api
+```
+
+### 4. ????? ???? Kong configuration
+
+???? `volumes/api/kong.yml` ?? ?? ?????? ??? ????? ????:
+
+```yaml
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-v1-open
+    url: http://auth:9999/verify
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/verify
+
+  - name: auth-v1-open-auth
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-open-auth
+        strip_path: true
+        paths:
+          - /auth/v1/
+
+  - name: auth-v1
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+          key_names:
+            - anon
+            - service_role
+
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: false
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+          key_names:
+            - anon
+            - service_role
+
+  - name: realtime-v1
+    url: http://realtime:4000/socket/
+    routes:
+      - name: realtime-v1-all
+        strip_path: true
+        paths:
+          - /realtime/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+          key_names:
+            - anon
+            - service_role
+
+  - name: storage-v1
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-all
+        strip_path: true
+        paths:
+          - /storage/v1/
+    plugins:
+      - name: cors
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+  - username: service_role
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:3000
+        - http://localhost:3001
+      credentials: true
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - X-Requested-With
+        - Authorization
+        - apikey
+      exposed_headers:
+        - X-Auth-Token
+      max_age: 3600
+```
+
+### 5. ?????????? ????????
+
+```bash
+docker-compose up -d
+```
+
+### 6. ????? ????? ????????
+
+```bash
+docker-compose ps
+```
+
+## ?????? ?? ????????
+
+- **Supabase Studio**: http://localhost:3001
+- **API Gateway**: http://localhost:8000
+- **PostgreSQL**: localhost:5432
+
+## ????? ?? Supabase ?? ????? Next.js
+
+?? ????? ElitePerfume ???:
+
+### 1. ??? Supabase Client
+
+```bash
+npm install @supabase/supabase-js
+```
+
+### 2. ????? ???? ?????
+
+?? ???? `.env.local` ????? Next.js:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+```
+
+### 3. ????? Supabase Client
+
+```javascript
+// lib/supabase.js
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+```
+
+## ???? ????????
+
+```bash
+docker-compose down
+```
+
+## ??? ??? ??????? ? ???? ????
+
+```bash
+docker-compose down -v
+rm -rf volumes/
+```
+
+## ???? ??????
+
+- ????? ?????? ??????? ?? ????? ????
+- ???? `.env` ?? ?? `.gitignore` ???? ????
+- ???? ???? production ?? ??????? ??? ??????? ????
+
+## ????????????
+
+???? ???????????? ?? ???????:
+
+```bash
+docker exec -t supabase-postgres pg_dumpall -c -U postgres > backup_`date +%Y-%m-%d_%H_%M_%S`.sql
+```
+
+## ???????
+
+```bash
+cat backup.sql | docker exec -i supabase-postgres psql -U postgres
+```
